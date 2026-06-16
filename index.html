@@ -1,0 +1,752 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RESTA Fast Food</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #070707;
+      color: #f7f2dd;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      padding: 24px 32px 40px;
+    }
+
+    .loading-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(7, 7, 7, 0.96);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.28s ease;
+    }
+
+    .loading-screen.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .loading-panel {
+      width: min(480px, 90vw);
+      display: grid;
+      gap: 18px;
+      padding: 32px;
+      border-radius: 28px;
+      background: rgba(14, 14, 14, 0.98);
+      border: 1px solid rgba(243, 203, 86, 0.18);
+      box-shadow: 0 36px 100px rgba(0, 0, 0, 0.35);
+      text-align: center;
+    }
+
+    .loading-panel .spinner {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto;
+      border: 6px solid rgba(243, 203, 86, 0.22);
+      border-top-color: #f7c654;
+      border-radius: 50%;
+      animation: spin 1.1s linear infinite;
+    }
+
+    .loading-panel .loading-text {
+      margin: 0;
+      color: #f7f2dd;
+      font-size: 1rem;
+      letter-spacing: 0.02em;
+    }
+
+    .loading-panel .skeleton-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .loading-panel .skeleton-card {
+      display: grid;
+      gap: 10px;
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.04);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .loading-panel .skeleton-line,
+    .loading-panel .skeleton-pill {
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0.08) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite linear;
+    }
+
+    .loading-panel .skeleton-pill {
+      width: 100px;
+      height: 14px;
+      margin-bottom: 8px;
+    }
+
+    .loading-panel .skeleton-line.short {
+      width: 55%;
+    }
+
+    .loading-panel .skeleton-line.medium {
+      width: 80%;
+    }
+
+    .loading-panel .skeleton-line.long {
+      width: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top left, rgba(243, 203, 86, 0.14), transparent 20%),
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.05), transparent 18%),
+        linear-gradient(180deg, #080808 0%, #0f0f0f 38%, #070707 100%);
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 20% 20%, rgba(243, 203, 86, 0.18), transparent 18%),
+        radial-gradient(circle at 85% 15%, rgba(234, 166, 74, 0.12), transparent 20%),
+        radial-gradient(circle at 50% 90%, rgba(255, 255, 255, 0.06), transparent 25%);
+      pointer-events: none;
+      opacity: 0.9;
+      animation: drift 18s ease-in-out infinite alternate;
+    }
+
+    @keyframes drift {
+      from { transform: translate(0px, 0px) scale(1); }
+      to { transform: translate(20px, -18px) scale(1.02); }
+    }
+
+    .hero {
+      display: grid;
+      gap: 18px;
+      padding: 24px 28px;
+      border: 1px solid rgba(243, 203, 86, 0.16);
+      border-radius: 28px;
+      background: rgba(14, 14, 14, 0.88);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.34);
+      transform-style: preserve-3d;
+      animation: floatCard 14s ease-in-out infinite;
+    }
+
+    @keyframes floatCard {
+      0%, 100% { transform: translateZ(0px); }
+      50% { transform: translateZ(8px); }
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .brand-logo img {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+      border-radius: 20px;
+      border: 1px solid rgba(243, 203, 86, 0.2);
+      background: rgba(255, 255, 255, 0.04);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+    }
+
+    .brand-title {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .brand-title h1 {
+      margin: 0;
+      font-size: clamp(2.4rem, 3vw, 3.4rem);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .brand-title h1 span {
+      color: #f4d27c;
+    }
+
+    .brand-subtitle {
+      color: #d8b46d;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(243, 203, 86, 0.2);
+      background: rgba(243, 203, 86, 0.14);
+      color: #2c1f0d;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .search-wrap {
+      display: grid;
+      gap: 14px;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 18px;
+      border: 1px solid rgba(243, 203, 86, 0.18);
+      background: rgba(243, 203, 86, 0.05);
+    }
+
+    .search-box input {
+      width: 100%;
+      border: none;
+      outline: none;
+      color: #fefefe;
+      background: transparent;
+      font-size: 1rem;
+      min-height: 40px;
+    }
+
+    .search-box input::placeholder {
+      color: #e5d89f;
+    }
+
+    .search-box svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+      color: #e5d89f;
+    }
+
+    .category-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 0 2px;
+    }
+
+    .category-btn {
+      border: 1px solid rgba(243, 203, 86, 0.16);
+      background: rgba(243, 203, 86, 0.07);
+      color: #f1e8c2;
+      padding: 10px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease;
+      font-size: 0.94rem;
+      white-space: nowrap;
+    }
+
+    .category-btn:hover {
+      transform: translateY(-1px);
+      background: rgba(243, 203, 86, 0.14);
+      color: #111;
+    }
+
+    .category-btn.active {
+      background: linear-gradient(135deg, #f5d170, #d9aa3f);
+      color: #111;
+      border-color: rgba(243, 203, 86, 0.34);
+    }
+
+    .menu-grid {
+      margin-top: 22px;
+      display: grid;
+      gap: 28px;
+    }
+
+    .category-section {
+      position: relative;
+      display: grid;
+      gap: 16px;
+      padding: 18px 20px 24px;
+      border-radius: 26px;
+      border: 1px solid rgba(243, 203, 86, 0.16);
+      background: rgba(14, 12, 18, 0.94);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+
+    .category-section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, rgba(255,255,255,0.03), transparent 30%);
+      pointer-events: none;
+      opacity: 0.8;
+    }
+
+    .category-header {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .category-title-section {
+      margin: 0;
+      font-size: 1.35rem;
+      letter-spacing: -0.02em;
+      color: #f8d973;
+    }
+
+    .category-meta {
+      color: #e9d59b;
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .category-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .dish-card {
+      border-radius: 24px;
+      padding: 22px;
+      background: rgba(12, 12, 15, 0.96);
+      border: 1px solid rgba(243, 203, 86, 0.14);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+      display: grid;
+      gap: 18px;
+      transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease, opacity 0.25s ease;
+      transform-style: preserve-3d;
+      opacity: 0;
+      transform: translateY(16px);
+      animation: cardAppear 0.45s ease forwards;
+    }
+
+    .dish-card:hover {
+      transform: translateY(-8px) rotateX(2deg) scale(1.01);
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.32);
+      background: rgba(24, 18, 20, 0.98);
+    }
+
+    @keyframes cardAppear {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 0% 0;
+      }
+      100% {
+        background-position: -200% 0;
+      }
+    }
+
+    .dish-card:hover .price-pill {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .dish-tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(243, 203, 86, 0.18);
+      color: #f3d778;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 0.75rem;
+      font-weight: 700;
+      width: fit-content;
+    }
+
+    .dish-name {
+      margin: 0;
+      font-size: 1.35rem;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .dish-description {
+      margin: 0;
+      color: #dacf9f;
+      font-size: 0.94rem;
+      line-height: 1.6;
+    }
+
+    .price-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .price-pill {
+      display: grid;
+      grid-template-columns: auto auto;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(243, 203, 86, 0.18);
+      background: rgba(243, 203, 86, 0.05);
+    }
+
+    .size-name {
+      color: #e6d5a4;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .size-value {
+      color: #f7c654;
+      font-weight: 800;
+      font-size: 1rem;
+      text-align: right;
+    }
+
+    .no-results {
+      grid-column: 1 / -1;
+      padding: 30px;
+      text-align: center;
+      color: #e9dcb4;
+      border: 1px dashed rgba(243, 203, 86, 0.2);
+      border-radius: 18px;
+      background: rgba(243, 203, 86, 0.03);
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        width: calc(100% - 20px);
+      }
+
+      .hero {
+        padding: 20px;
+      }
+
+      .price-pill {
+        grid-template-columns: 1fr;
+        row-gap: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="loading-screen visible" id="loadingScreen">
+    <div class="loading-panel">
+      <div class="spinner" aria-hidden="true"></div>
+      <p class="loading-text">Loading the menu and warming up the kitchen...</p>
+      <div class="skeleton-grid">
+        <div class="skeleton-card">
+          <div class="skeleton-pill"></div>
+          <div class="skeleton-line short"></div>
+          <div class="skeleton-line medium"></div>
+          <div class="skeleton-line long"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-pill"></div>
+          <div class="skeleton-line short"></div>
+          <div class="skeleton-line medium"></div>
+          <div class="skeleton-line long"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="page">
+    <section class="hero">
+      <div class="brand">
+        <div class="brand-logo">
+          <img src="img/Resta-Logo1.png" alt="RESTA logo" />
+        </div>
+        <div class="brand-title">
+          <h1>RESTA <span>Fast Food</span></h1>
+          <div class="brand-subtitle">Gonapola's Finest</div>
+        </div>
+        <div class="status-pill">OPEN</div>
+      </div>
+
+      <div class="search-wrap">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.5 19c4.694 0 8.5-3.806 8.5-8.5S15.194 2 10.5 2 2 5.806 2 10.5 5.806 19 10.5 19zm0-2C7.467 17 5 14.533 5 11.5S7.467 6 10.5 6 16 8.467 16 11.5 13.533 17 10.5 17zm10.5 3.5l-4.4-4.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg>
+          <input id="searchInput" type="search" placeholder="Search dishes, categories..." autocomplete="off" />
+        </div>
+        <div class="category-list" id="categoryList"></div>
+        <p style="margin:0; color:#cedaf7; opacity:0.82; font-size:0.98rem;">Friendly menu filtering lets you tap a category or search any dish — everything stays grouped and easy to scan.</p>
+      </div>
+    </section>
+
+    <section class="menu-grid" id="menuGrid"></section>
+  </main>
+
+  <script>
+    const menuItems = [
+      { category: 'Family Packs', badge: 'Family Pack', name: 'Chicken', prices: { '4 Person': 'Rs. 1,450', '5 Person': 'Rs. 1,900' } },
+      { category: 'Family Packs', badge: 'Family Pack', name: 'Sea Food', prices: { '4 Person': 'Rs. 1,900', '5 Person': 'Rs. 2,400' } },
+      { category: 'Family Packs', badge: 'Family Pack', name: 'Mix', prices: { '4 Person': 'Rs. 2,200', '5 Person': 'Rs. 2,750' } },
+
+      { category: 'Sawans', badge: 'Sawan', name: 'Kottu Sawan', prices: { '6 Person': 'Rs. 5,000', '8 Person': 'Rs. 6,000' } },
+      { category: 'Sawans', badge: 'Sawan', name: 'Biriyani', prices: { '6 Person': 'Rs. 5,000', '8 Person': 'Rs. 6,000' } },
+      { category: 'Sawans', badge: 'Sawan', name: 'Mix', prices: { '6 Person': 'Rs. 5,200', '8 Person': 'Rs. 6,000' } },
+
+      { category: 'Basmathi', badge: 'Basmathi', name: 'Vegetable', prices: { Small: 'Rs. 600', Medium: 'Rs. 900', Large: 'Rs. 1,200' } },
+      { category: 'Basmathi', badge: 'Basmathi', name: 'Egg', prices: { Small: 'Rs. 700', Medium: 'Rs. 1,000', Large: 'Rs. 1,300' } },
+      { category: 'Basmathi', badge: 'Basmathi', name: 'Chicken', prices: { Small: 'Rs. 800', Medium: 'Rs. 1,200', Large: 'Rs. 1,450' } },
+      { category: 'Basmathi', badge: 'Basmathi', name: 'Fish', prices: { Small: 'Rs. 850', Medium: 'Rs. 1,200', Large: 'Rs. 1,500' } },
+      { category: 'Basmathi', badge: 'Basmathi', name: 'Sea Food', prices: { Small: 'Rs. 1,250', Medium: 'Rs. 1,550', Large: 'Rs. 1,850' } },
+      { category: 'Basmathi', badge: 'Basmathi', name: 'Mix', prices: { Small: 'Rs. 1,300', Medium: 'Rs. 1,600', Large: 'Rs. 1,900' } },
+      { category: 'Basmathi', badge: 'Basmathi', name: 'Nasigoorane Chicken', prices: { Medium: 'Rs. 1,200', Large: 'Rs. 1,700' } },
+      { category: 'Basmathi', badge: 'Basmathi', name: 'Nasigoorane Mix', prices: { Medium: 'Rs. 1,500', Large: 'Rs. 2,250' } },
+      { category: 'Basmathi', badge: 'Basmathi', name: 'Chopset Rice Chicken', prices: { Medium: 'Rs. 1,100', Large: 'Rs. 1,850' } },
+      { category: 'Basmathi', badge: 'Basmathi', name: 'Chopsey Rice Mix', prices: { Medium: 'Rs. 1,800', Large: 'Rs. 2,300' } },
+
+      { category: 'Keeri Samba', badge: 'Keeri Samba', name: 'Vegetable', prices: { Small: 'Rs. 400', Medium: 'Rs. 750', Large: 'Rs. 900' } },
+      { category: 'Keeri Samba', badge: 'Keeri Samba', name: 'Egg', prices: { Small: 'Rs. 450', Medium: 'Rs. 750', Large: 'Rs. 900' } },
+      { category: 'Keeri Samba', badge: 'Keeri Samba', name: 'Chicken', prices: { Small: 'Rs. 500', Medium: 'Rs. 800', Large: 'Rs. 1,000' } },
+      { category: 'Keeri Samba', badge: 'Keeri Samba', name: 'Fish', prices: { Small: 'Rs. 700', Medium: 'Rs. 950', Large: 'Rs. 1,200' } },
+      { category: 'Keeri Samba', badge: 'Keeri Samba', name: 'Sea Food', prices: { Small: 'Rs. 950', Medium: 'Rs. 1,200', Large: 'Rs. 1,500' } },
+      { category: 'Keeri Samba', badge: 'Keeri Samba', name: 'Mix', prices: { Small: 'Rs. 1,000', Medium: 'Rs. 1,300', Large: 'Rs. 1,750' } },
+      { category: 'Keeri Samba', badge: 'Keeri Samba', name: 'Nasigoorane Chicken', prices: { Medium: 'Rs. 900', Large: 'Rs. 1,400' } },
+      { category: 'Keeri Samba', badge: 'Keeri Samba', name: 'Nasigoorane Mix', prices: { Medium: 'Rs. 1,300', Large: 'Rs. 1,950' } },
+      { category: 'Keeri Samba', badge: 'Keeri Samba', name: 'Chopset Rice Chicken', prices: { Medium: 'Rs. 900', Large: 'Rs. 1,500' } },
+      { category: 'Keeri Samba', badge: 'Keeri Samba', name: 'Chopsey Rice Mix', prices: { Medium: 'Rs. 1,100', Large: 'Rs. 2,000' } },
+
+      { category: 'Cheese Kottu', badge: 'Cheese Kottu', name: 'Veg Cheese Kottu', prices: { Small: 'Rs. 750', Large: 'Rs. 1,150' } },
+      { category: 'Cheese Kottu', badge: 'Cheese Kottu', name: 'Egg Cheese Kottu', prices: { Small: 'Rs. 900', Large: 'Rs. 1,300' } },
+      { category: 'Cheese Kottu', badge: 'Cheese Kottu', name: 'Chicken Cheese Kottu', prices: { Small: 'Rs. 1,000', Large: 'Rs. 1,650' } },
+
+      { category: 'Bites', badge: 'Bites', name: 'Chicken', prices: { '300g': 'Rs. 1,000', '500g': 'Rs. 1,600' } },
+      { category: 'Bites', badge: 'Bites', name: 'Fish', prices: { '300g': 'Rs. 1,300', '500g': 'Rs. 1,800' } },
+      { category: 'Bites', badge: 'Bites', name: 'Pork', prices: { '300g': 'Rs. 1,300', '500g': 'Rs. 1,800' } },
+      { category: 'Bites', badge: 'Bites', name: 'Prawns', prices: { '300g': 'Rs. 1,300', '500g': 'Rs. 1,800' } },
+      { category: 'Bites', badge: 'Bites', name: 'Cuttle Fish', prices: { '300g': 'Rs. 1,300', '500g': 'Rs. 1,800' } },
+      { category: 'Bites', badge: 'Bites', name: 'Mutton', prices: { '300g': 'Rs. 1,600', '500g': 'Rs. 2,800' } },
+      { category: 'Bites', badge: 'Bites', name: 'Chicken Masala', prices: { Normal: 'Rs. 1,500', Full: 'Rs. 2,500' } },
+
+      { category: 'Kottu', badge: 'Kottu', name: 'Vegetable', prices: { Small: 'Rs. 400', Large: 'Rs. 550' } },
+      { category: 'Kottu', badge: 'Kottu', name: 'Egg', prices: { Small: 'Rs. 500', Large: 'Rs. 600' } },
+      { category: 'Kottu', badge: 'Kottu', name: 'Chicken', prices: { Small: 'Rs. 600', Large: 'Rs. 750' } },
+      { category: 'Kottu', badge: 'Kottu', name: 'Sea Food', prices: { Small: 'Rs. 950', Large: 'Rs. 1,300' } },
+      { category: 'Kottu', badge: 'Kottu', name: 'Mix', prices: { Small: 'Rs. 1,000', Large: 'Rs. 1,500' } },
+      { category: 'Kottu', badge: 'Kottu', name: 'Dolpin', prices: { Small: 'Rs. 850', Large: 'Rs. 1,100' } },
+      { category: 'Kottu', badge: 'Kottu', name: 'Pork', prices: { Small: 'Rs. 800', Large: 'Rs. 1,000' } },
+      { category: 'Kottu', badge: 'Kottu', name: 'String Hoppers', prices: { Small: 'Rs. 700', Large: 'Rs. 850' } },
+      { category: 'Kottu', badge: 'Kottu', name: 'Roasted Chicken', prices: { Small: 'Rs. 700', Large: 'Rs. 850' } },
+
+      { category: 'Noodles', badge: 'Noodles', name: 'Vegetable', prices: { Small: 'Rs. 550', Large: 'Rs. 800' } },
+      { category: 'Noodles', badge: 'Noodles', name: 'Egg', prices: { Small: 'Rs. 600', Large: 'Rs. 900' } },
+      { category: 'Noodles', badge: 'Noodles', name: 'Chicken', prices: { Small: 'Rs. 700', Large: 'Rs. 1,200' } },
+      { category: 'Noodles', badge: 'Noodles', name: 'Fish', prices: { Small: 'Rs. 750', Large: 'Rs. 1,300' } },
+      { category: 'Noodles', badge: 'Noodles', name: 'Sea Food', prices: { Small: 'Rs. 950', Large: 'Rs. 1,400' } },
+      { category: 'Noodles', badge: 'Noodles', name: 'Mix', prices: { Small: 'Rs. 1,000', Large: 'Rs. 1,600' } },
+
+      { category: 'Biriyani', badge: 'Biriyani', name: 'Chicken Biriyani', prices: { Small: 'Rs. 650', Large: 'Rs. 1,100' } },
+      { category: 'Biriyani', badge: 'Biriyani', name: 'Egg Biriyani', prices: { Small: 'Rs. 550', Large: 'Rs. 950' } },
+
+      { category: 'Rice & Curry', badge: 'Rice & Curry', name: 'Vegetable', prices: { Small: 'Rs. 300', Large: 'Rs. 400' } },
+      { category: 'Rice & Curry', badge: 'Rice & Curry', name: 'Egg', prices: { Small: 'Rs. 350', Large: 'Rs. 450' } },
+      { category: 'Rice & Curry', badge: 'Rice & Curry', name: 'Fish', prices: { Small: 'Rs. 380', Large: 'Rs. 500' } },
+      { category: 'Rice & Curry', badge: 'Rice & Curry', name: 'Chicken', prices: { Small: 'Rs. 380', Large: 'Rs. 500' } },
+      { category: 'Rice & Curry', badge: 'Rice & Curry', name: 'Pork', prices: { Small: 'Rs. 500', Large: 'Rs. 700' } },
+
+      { category: 'Omelets', badge: 'Omelets', name: 'Cheese Omelet', prices: { Single: 'Rs. 750' } },
+      { category: 'Omelets', badge: 'Omelets', name: 'Chicken Omelet', prices: { Single: 'Rs. 600' } },
+      { category: 'Omelets', badge: 'Omelets', name: 'Mushroom Omelet', prices: { Single: 'Rs. 500' } },
+
+      { category: 'Sides', badge: 'Sides', name: 'Fish Finger', prices: { Single: 'Rs. 1,800' } },
+      { category: 'Sides', badge: 'Sides', name: 'Hot Butter Mushroom', prices: { Single: 'Rs. 850' } },
+      { category: 'Sides', badge: 'Sides', name: 'Boiled Vegetables', prices: { Single: 'Rs. 850' } },
+      { category: 'Sides', badge: 'Sides', name: 'French Fries', prices: { Single: 'Rs. 700' } },
+
+      { category: 'Party Packs', badge: 'Party Pack', name: 'Pack 1', prices: { '5 Person': 'Rs. 4,300' }, description: 'Plain Rice + Chicken/Fish/Prawns, Tempered Potato, Chashuwy Curry, Cutlet, Salad, Papadam' },
+      { category: 'Party Packs', badge: 'Party Pack', name: 'Pack 2', prices: { '5 Person': 'Rs. 4,500' }, description: 'Egg Rice + Seafood Devil/Mix Devil, Cutlet, Chilly Paste, Chopsey, Batu Moju, Butter Mushroom' },
+
+      { category: 'Add-ons', badge: 'Add-on', name: 'Drumstick', prices: { Single: 'Rs. 250' } },
+      { category: 'Add-ons', badge: 'Add-on', name: 'Chicken Curry', prices: { Single: 'Rs. 300' } },
+      { category: 'Add-ons', badge: 'Add-on', name: 'Fish Curry', prices: { Single: 'Rs. 250' } },
+      { category: 'Add-ons', badge: 'Add-on', name: 'Baquarta', prices: { Single: 'Rs. 700' } }
+    ];
+
+    const categories = [
+      'All', 'Family Packs', 'Sawans', 'Basmathi', 'Keeri Samba', 'Cheese Kottu', 'Bites', 'Kottu', 'Noodles', 'Biriyani', 'Rice & Curry', 'Omelets', 'Sides', 'Party Packs', 'Add-ons'
+    ];
+
+    let activeCategory = 'All';
+    const categoryList = document.getElementById('categoryList');
+    const menuGrid = document.getElementById('menuGrid');
+    const searchInput = document.getElementById('searchInput');
+    const loadingScreen = document.getElementById('loadingScreen');
+
+    function showLoading() {
+      loadingScreen.classList.add('visible');
+    }
+
+    function hideLoading() {
+      loadingScreen.classList.remove('visible');
+    }
+
+    function createCategoryButtons() {
+      categories.forEach(category => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'category-btn' + (category === activeCategory ? ' active' : '');
+        button.textContent = category;
+        button.addEventListener('click', () => {
+          activeCategory = category;
+          updateActiveCategory();
+          renderMenu();
+        });
+        categoryList.append(button);
+      });
+    }
+
+    function updateActiveCategory() {
+      const buttons = categoryList.querySelectorAll('.category-btn');
+      buttons.forEach(btn => btn.classList.toggle('active', btn.textContent === activeCategory));
+    }
+
+    function renderMenu() {
+      const term = searchInput.value.trim().toLowerCase();
+      const filtered = menuItems.filter(item => {
+        const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
+        const content = `${item.name} ${item.category} ${item.badge || ''} ${item.description || ''}`.toLowerCase();
+        const matchesSearch = !term || content.includes(term);
+        return matchesCategory && matchesSearch;
+      });
+
+      const grouped = filtered.reduce((acc, item) => {
+        if (!acc[item.category]) acc[item.category] = [];
+        acc[item.category].push(item);
+        return acc;
+      }, {});
+
+      menuGrid.innerHTML = '';
+
+      if (!filtered.length) {
+        const noResults = document.createElement('div');
+        noResults.className = 'no-results';
+        noResults.textContent = 'No items match your search. Try another keyword or category.';
+        menuGrid.append(noResults);
+        return;
+      }
+
+      Object.entries(grouped).forEach(([category, items]) => {
+        const section = document.createElement('section');
+        section.className = 'category-section';
+
+        const header = document.createElement('div');
+        header.className = 'category-header';
+
+        const title = document.createElement('h2');
+        title.className = 'category-title-section';
+        title.textContent = category;
+
+        const meta = document.createElement('span');
+        meta.className = 'category-meta';
+        meta.textContent = `${items.length} item${items.length > 1 ? 's' : ''}`;
+
+        header.append(title, meta);
+        section.append(header);
+
+        const cardGrid = document.createElement('div');
+        cardGrid.className = 'category-cards';
+
+        items.forEach(item => {
+          const card = document.createElement('article');
+          card.className = 'dish-card';
+
+          const tag = document.createElement('span');
+          tag.className = 'dish-tag';
+          tag.textContent = item.badge || item.category;
+          card.append(tag);
+
+          const title = document.createElement('h3');
+          title.className = 'dish-name';
+          title.textContent = item.name;
+          card.append(title);
+
+          if (item.description) {
+            const description = document.createElement('p');
+            description.className = 'dish-description';
+            description.textContent = item.description;
+            card.append(description);
+          }
+
+          const priceGrid = document.createElement('div');
+          priceGrid.className = 'price-grid';
+
+          Object.entries(item.prices).forEach(([label, value]) => {
+            const pill = document.createElement('div');
+            pill.className = 'price-pill';
+            pill.innerHTML = `<span class="size-name">${label}</span><span class="size-value">${value}</span>`;
+            priceGrid.append(pill);
+          });
+
+          card.append(priceGrid);
+          cardGrid.append(card);
+        });
+
+        section.append(cardGrid);
+        menuGrid.append(section);
+      });
+    }
+
+    searchInput.addEventListener('input', renderMenu);
+
+    window.addEventListener('load', () => {
+      showLoading();
+      setTimeout(() => {
+        createCategoryButtons();
+        renderMenu();
+        hideLoading();
+      }, 750);
+    });
+  </script>
+</body>
+</html>
